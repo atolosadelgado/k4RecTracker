@@ -46,7 +46,7 @@ include(CheckIncludeFileCXX)
 set(CMAKE_REQUIRED_LIBRARIES DD4hep::DDRec)
 CHECK_INCLUDE_FILE_CXX(DDRec/DCH_info.h DCH_INFO_H_EXIST)
 set(CMAKE_REQUIRED_LIBRARIES)
-set(FILES_DEPENDINGON_DCH_INFO_H "DCHdigi.cpp" )
+set(FILES_DEPENDINGON_DCH_INFO_H "DCHdigi_v01.cpp" )
 if(NOT DCH_INFO_H_EXIST)
     list(FILTER sources EXCLUDE REGEX "${FILES_DEPENDINGON_DCH_INFO_H}")
     message(WARNING "Gaudi algorithm defined in ${FILES_DEPENDINGON_DCH_INFO_H} will not be built because header file DDRec/DCH_info.h was not found")
@@ -65,12 +65,14 @@ gaudi_add_module(${PackageName}
   ROOT::MathCore
   ROOT::MathMore
   GSL::gsl
+  ${DELPHES_LIBRARY}
 )
 
 target_include_directories(${PackageName} PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>
   ${CMAKE_INSTALL_PREFIX}/extension
+  ${DELPHES_INCLUDE_DIRS}
 )
 
 set_target_properties(${PackageName} PROPERTIES PUBLIC_HEADER "${headers}")

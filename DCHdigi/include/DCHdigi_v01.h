@@ -73,7 +73,8 @@
 // Class developed by Walaa for the CLS
 #include "AlgData.h"
 
-/// constant to convert from mm (EDM4hep) to DD4hep (cm)
+// Class used in Delphes studies to calculate the CLS
+#include "TrackCovariance/TrkUtil.h"
 
 struct DCHdigi_v01 final
     : k4FWCore::MultiTransformer<
@@ -180,6 +181,8 @@ private:
 
   bool IsParticleCreatedInsideDriftChamber(const edm4hep::MCParticle &) const ;
 
+
+  TrkUtil delphes_track_util;
 
   //------------------------------------------------------------------
   //        debug information
