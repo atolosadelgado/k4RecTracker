@@ -60,6 +60,7 @@
 // STL
 #include <random>
 #include <string>
+#include <functional>
 
 // data extension for detector DCH_v2
 #include "DDRec/DCH_info.h"
@@ -177,12 +178,21 @@ private:
   AlgData* flData;
 
   /// code developed by Walaa for calculating number of clusters and cluster size of each one
-  std::pair<uint32_t, std::vector<int>> CalculateClusters(const edm4hep::SimTrackerHit& input_sim_hit) const;
+  std::pair<uint32_t, std::vector<int>> CalculateClusters_opt1(const edm4hep::SimTrackerHit& input_sim_hit) const;
+
+  /// code from Delphes module for calculating number of clusters; dummy vector is returned
+  std::pair<uint32_t, std::vector<int>> CalculateClusters_opt2(const edm4hep::SimTrackerHit& input_sim_hit) const;
+
+  /// dummy option
+  std::pair<uint32_t, std::vector<int>> CalculateClusters_opt0(const edm4hep::SimTrackerHit& ) const {return {0,{0}};};
+
+  // Member function pointers for the corresponding options
+  std::pair<uint32_t, std::vector<int>> (DCHdigi_v01::*CalculateClusters)(const edm4hep::SimTrackerHit& input_sim_hit) const = { &DCHdigi_v01::CalculateClusters_opt2};
 
   bool IsParticleCreatedInsideDriftChamber(const edm4hep::MCParticle &) const ;
 
 
-  TrkUtil delphes_track_util;
+  TrkUtil * delphes_track_util;
 
   //------------------------------------------------------------------
   //        debug information

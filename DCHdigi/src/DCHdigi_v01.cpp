@@ -77,6 +77,13 @@ StatusCode DCHdigi_v01::initialize() {
   debug() << Form("Opening %s... Done", m_fileDataAlg.value().c_str()) << endmsg;
   ///////////////////////////////////////////////////////////////////////////////////
 
+
+  delphes_track_util = new TrkUtil;
+  // Set He-Isobuthane (90-10)
+  delphes_track_util->SetGasMix(0);
+  // auto dndx_opt2 = [&](const edm4hep::SimTrackerHit& input_sim_hit)
+
+
   std::stringstream ss;
   PrintConfiguration(ss);
   info() << ss.str().c_str() << endmsg;
@@ -188,7 +195,8 @@ DCHdigi_v01::operator()(const edm4hep::SimTrackerHitCollection& input_sim_hits,
     // For the sake of speed, let the dNdx calculation be optional
     if( m_calculate_dndx.value() )
     {
-      auto [nCluster, nElectrons_v] = CalculateClusters(input_sim_hit);
+      // CalculateClusters is a pointer to the function actually calculating things
+      auto [nCluster, nElectrons_v] = (this->*CalculateClusters)(input_sim_hit);
       // to return the total number of electrons within the step, do the following:
       //   int nElectronsTotal = std::accumulate( nElectrons_v.begin(), nElectrons_v.end(), 0);
       //   oDCHdigihit.setNElectronsTotal(nElectronsTotal);
@@ -309,7 +317,7 @@ bool DCHdigi_v01::IsParticleCreatedInsideDriftChamber(const edm4hep::MCParticle&
   return (vertexZabs < DCH_halflengh) && (vertexRsquared > DCH_rin_squared) && (vertexRsquared < DCH_rout_squared);
 }
 
-std::pair<uint32_t, std::vector<int> > DCHdigi_v01::CalculateClusters(const edm4hep::SimTrackerHit& input_sim_hit) const {
+std::pair<uint32_t, std::vector<int> > DCHdigi_v01::CalculateClusters_opt1(const edm4hep::SimTrackerHit& input_sim_hit) const {
 
   const edm4hep::MCParticle& thisParticle = input_sim_hit.getParticle();
   // if gamma, optical photon, or other particle with null mass, or hit with zero energy deposited, return zero clusters
@@ -540,3 +548,31 @@ std::pair<uint32_t, std::vector<int> > DCHdigi_v01::CalculateClusters(const edm4
   // return {total_number_of_clusters, total_number_of_electrons_over_all_clusters};
   return {total_number_of_clusters, ClSz_vector};
 }
+
+
+std::pair<uint32_t, std::vector<int> > DCHdigi_v01::CalculateClusters_opt2(const edm4hep::SimTrackerHit& input_sim_hit) const {
+
+      const edm4hep::MCParticle& thisParticle = input_sim_hit.getParticle();
+      // if gamma, optical photon, or other particle with null mass, or hit with zero energy deposited, return zero clusters
+      if( 22 == abs(thisParticle.getPDG()) || 0 == thisParticle.getMass() || 0 == input_sim_hit.getEDep() )
+        return {0., std::vector<int>{} };
+      // Momentum from EDM4hep, in GeV
+      double Momentum = sqrt((input_sim_hit.getMomentum().x * input_sim_hit.getMomentum().x) +
+                         (input_sim_hit.getMomentum().y * input_sim_hit.getMomentum().y) +
+                         (input_sim_hit.getMomentum().z * input_sim_hit.getMomentum().z));
+      double thisparticle_mass = (thisParticle.getMass() );  // mass in GeV, required in MeV
+      double bg                = Momentum / thisparticle_mass;
+      // EDM4hep SimHit pathlength is in mm
+      /// we need to convert to meters
+      double mm_to_m = 0.001;
+      double path_length_meters = input_sim_hit.getPathLength() * mm_to_m;
+      auto average_nclusters = delphes_track_util->Nclusters(bg) * path_length_meters;
+      /// Actual number of clusters
+      int rnd_nclusters = this->myRandom.PoissonD(average_nclusters);
+      int dummy_value = -999;
+      // return vector of cluster size filled with dummy value
+      std::cout << "bg\t" << bg
+                << "\taverage_nclusters\t" << average_nclusters
+                << "\trnd_nclusters\t" << rnd_nclusters << std::endl;
+      return {rnd_nclusters, std::vector<int>{rnd_nclusters,dummy_value} };
+  };
